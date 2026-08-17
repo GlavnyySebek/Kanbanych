@@ -45,12 +45,14 @@
         <div class="row"><strong id="who"></strong><span class="status"><span id="dot" class="dot"></span> <span id="sync">Синхронизация…</span></span><button id="logout" type="button">Выйти</button></div>
       </div>
       <div id="msg" class="notice hidden" role="status" aria-live="polite"></div>
-      <div class="sub version">Интерфейс v4</div>
+      <div class="sub version">Интерфейс v5</div>
     </section>
-    <div class="stats"><div class="stat">Выполнено: <b id="done">0</b></div><div class="stat">Всего: <b id="total">0</b></div><div class="stat">Прогресс: <b id="pct">0%</b></div></div>
-    <div class="bar"><div id="fill" class="fill"></div></div>
+    <div id="privateHeader" class="hidden">
+      <div class="stats"><div class="stat">Выполнено: <b id="done">0</b></div><div class="stat">Всего: <b id="total">0</b></div><div class="stat">Прогресс: <b id="pct">0%</b></div></div>
+      <div class="bar"><div id="fill" class="fill"></div></div>
+    </div>
   </header>
-  <main>
+  <main id="privateMain" class="hidden">
     <div id="board" class="board"></div>
     <section class="footer"><b>Облачная синхронизация</b><p class="sub">Войди под одним аккаунтом на обоих устройствах. Галочки и комментарии сохраняются в Supabase.</p><button id="reset" type="button">Сбросить весь мой прогресс</button></section>
   </main>
@@ -60,74 +62,48 @@
   const KEY = 'sb_publishable_JkEf05r9Sd9nPyO-m2WdEw_BEu7Ve-d';
   const el = {
     board: document.getElementById('board'), msg: document.getElementById('msg'), toast: document.getElementById('toast'),
-    authOut: document.getElementById('out'), authIn: document.getElementById('in'), email: document.getElementById('email'),
-    pass: document.getElementById('pass'), accessKey: document.getElementById('accessKey'), login: document.getElementById('login'),
-    signup: document.getElementById('signup'), who: document.getElementById('who'), dot: document.getElementById('dot'),
-    sync: document.getElementById('sync'), logout: document.getElementById('logout'), done: document.getElementById('done'),
-    total: document.getElementById('total'), pct: document.getElementById('pct'), fill: document.getElementById('fill'),
-    reset: document.getElementById('reset')
+    authOut: document.getElementById('out'), authIn: document.getElementById('in'), privateHeader: document.getElementById('privateHeader'), privateMain: document.getElementById('privateMain'),
+    email: document.getElementById('email'), pass: document.getElementById('pass'), accessKey: document.getElementById('accessKey'), login: document.getElementById('login'), signup: document.getElementById('signup'),
+    who: document.getElementById('who'), dot: document.getElementById('dot'), sync: document.getElementById('sync'), logout: document.getElementById('logout'),
+    done: document.getElementById('done'), total: document.getElementById('total'), pct: document.getElementById('pct'), fill: document.getElementById('fill'), reset: document.getElementById('reset')
   };
   let toastTimer = null;
   function notice(text, type = 'info') {
-    el.msg.textContent = text;
-    el.msg.className = 'notice ' + type;
-    el.toast.textContent = text;
-    el.toast.className = 'toast ' + type;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { el.toast.className = 'toast hidden'; }, 5000);
+    el.msg.textContent = text; el.msg.className = 'notice ' + type;
+    el.toast.textContent = text; el.toast.className = 'toast ' + type;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.toast.className = 'toast hidden'; }, 5000);
   }
   function setAuthBusy(busy) { el.login.disabled = busy; el.signup.disabled = busy; }
   function loginErrorMessage(error) {
-    const code = String(error?.code || '');
-    const raw = String(error?.message || '').toLowerCase();
+    const code = String(error?.code || ''), raw = String(error?.message || '').toLowerCase();
     if (code === 'invalid_credentials' || raw.includes('invalid login credentials')) return 'Неверный email или пароль.';
     if (code === 'email_not_confirmed' || raw.includes('email not confirmed')) return 'Email ещё не подтверждён.';
     if (raw.includes('rate limit') || code.includes('rate_limit')) return 'Слишком много попыток входа. Попробуй немного позже.';
     return 'Не удалось войти. Проверь данные и подключение к интернету.';
   }
-  window.addEventListener('error', (event) => {
-    console.error('UI error:', event.error || event.message);
-    if (el?.msg) notice('Произошла ошибка интерфейса. Обнови страницу и попробуй ещё раз.', 'error');
-  });
-  if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-    notice('Не удалось загрузить модуль Supabase. Обнови страницу или проверь блокировщики контента.', 'error');
-    setAuthBusy(true);
-    return;
-  }
+  window.addEventListener('error', event => { console.error('UI error:', event.error || event.message); if (el?.msg) notice('Произошла ошибка интерфейса. Обнови страницу и попробуй ещё раз.', 'error'); });
+  if (!window.supabase || typeof window.supabase.createClient !== 'function') { notice('Не удалось загрузить модуль Supabase. Обнови страницу или проверь блокировщики контента.', 'error'); setAuthBusy(true); return; }
   const sb = window.supabase.createClient(URL, KEY);
   const stages = [
-    ['1. Идея','Понять, какую игру мы создаём.',[
-      'Сформулировать идею игры в 1–2 предложениях','Определить жанр: платформер, RPG, стратегия, idle и т.д.','Определить главную игровую механику','Определить платформу: браузер, ПК, мобильная','Выбрать 3–5 игр-референсов','Определить, чем игра будет интересна игроку']],
-    ['2. Концепт и GDD','Разложить идею на конкретные правила.',[
-      'Описать основной игровой цикл: действие → награда → развитие','Описать управление','Определить условия победы и поражения','Продумать прогрессию игрока','Составить список персонажей, врагов и объектов','Определить визуальный стиль и атмосферу','Записать MVP — минимальную версию игры']],
-    ['3. Прототип','Проверить главную механику.',[
-      'Создать базовую игровую сцену','Добавить управление игроком','Реализовать главную механику','Добавить простых противников или препятствия','Добавить условие победы/поражения','Проверить: играть уже интересно без красивой графики?']],
-    ['4. Основная разработка','Собрать полноценную игровую систему.',[
-      'Разработать уровни или игровой мир','Добавить врагов и их поведение','Добавить предметы, способности или ресурсы','Реализовать прогрессию','Добавить систему здоровья, очков или экономики','Сделать меню, паузу и рестарт','Добавить сохранение прогресса']],
-    ['5. Графика и звук','Сделать игру визуально цельной.',[
-      'Создать или подобрать графику','Добавить анимации','Оформить интерфейс','Добавить визуальные эффекты','Добавить звуки действий','Добавить музыку','Проверить читаемость и единый стиль']],
-    ['6. Баланс','Сделать игру понятной и увлекательной.',[
-      'Настроить сложность','Настроить скорость прогрессии','Проверить награды и экономику','Убрать скучные или слишком сложные места','Проверить обучение игрока','Сыграть самому от начала до конца']],
-    ['7. Тестирование','Найти ошибки до игроков.',[
-      'Проверить игру в разных браузерах/устройствах','Найти критические баги','Проверить производительность','Дать игру нескольким тестировщикам','Записать обратную связь','Исправить повторяющиеся проблемы']],
-    ['8. Релиз','Опубликовать и улучшать игру.',[
-      'Подготовить финальную сборку','Создать название, иконку и описание игры','Сделать скриншоты или трейлер','Опубликовать игру','Собрать отзывы игроков','Составить список обновлений','Выпустить первый патч']]
+    ['1. Идея','Понять, какую игру мы создаём.',['Сформулировать идею игры в 1–2 предложениях','Определить жанр: платформер, RPG, стратегия, idle и т.д.','Определить главную игровую механику','Определить платформу: браузер, ПК, мобильная','Выбрать 3–5 игр-референсов','Определить, чем игра будет интересна игроку']],
+    ['2. Концепт и GDD','Разложить идею на конкретные правила.',['Описать основной игровой цикл: действие → награда → развитие','Описать управление','Определить условия победы и поражения','Продумать прогрессию игрока','Составить список персонажей, врагов и объектов','Определить визуальный стиль и атмосферу','Записать MVP — минимальную версию игры']],
+    ['3. Прототип','Проверить главную механику.',['Создать базовую игровую сцену','Добавить управление игроком','Реализовать главную механику','Добавить простых противников или препятствия','Добавить условие победы/поражения','Проверить: играть уже интересно без красивой графики?']],
+    ['4. Основная разработка','Собрать полноценную игровую систему.',['Разработать уровни или игровой мир','Добавить врагов и их поведение','Добавить предметы, способности или ресурсы','Реализовать прогрессию','Добавить систему здоровья, очков или экономики','Сделать меню, паузу и рестарт','Добавить сохранение прогресса']],
+    ['5. Графика и звук','Сделать игру визуально цельной.',['Создать или подобрать графику','Добавить анимации','Оформить интерфейс','Добавить визуальные эффекты','Добавить звуки действий','Добавить музыку','Проверить читаемость и единый стиль']],
+    ['6. Баланс','Сделать игру понятной и увлекательной.',['Настроить сложность','Настроить скорость прогрессии','Проверить награды и экономику','Убрать скучные или слишком сложные места','Проверить обучение игрока','Сыграть самому от начала до конца']],
+    ['7. Тестирование','Найти ошибки до игроков.',['Проверить игру в разных браузерах/устройствах','Найти критические баги','Проверить производительность','Дать игру нескольким тестировщикам','Записать обратную связь','Исправить повторяющиеся проблемы']],
+    ['8. Релиз','Опубликовать и улучшать игру.',['Подготовить финальную сборку','Создать название, иконку и описание игры','Сделать скриншоты или трейлер','Опубликовать игру','Собрать отзывы игроков','Составить список обновлений','Выпустить первый патч']]
   ];
-  let id = 0, user = null;
-  const timers = {};
+  let id = 0, user = null; const timers = {};
   for (const stage of stages) {
-    const col = document.createElement('section');
-    col.className = 'column';
+    const col = document.createElement('section'); col.className = 'column';
     const title = document.createElement('h2'); title.textContent = stage[0]; col.appendChild(title);
     const goal = document.createElement('div'); goal.className = 'goal'; goal.textContent = stage[1]; col.appendChild(goal);
     for (const text of stage[2]) {
-      id++;
-      const n = id;
-      const wrap = document.createElement('div'); wrap.className = 'wrap';
+      id++; const n = id, wrap = document.createElement('div'); wrap.className = 'wrap';
       const label = document.createElement('label'); label.className = 'task';
       const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.dataset.id = String(n);
-      const span = document.createElement('span'); span.textContent = text;
-      label.append(checkbox, span);
+      const span = document.createElement('span'); span.textContent = text; label.append(checkbox, span);
       const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'toggle'; toggle.dataset.id = String(n); toggle.textContent = '💬 Добавить комментарий';
       const box = document.createElement('div'); box.className = 'commentbox'; box.id = 'cb' + n;
       const area = document.createElement('textarea'); area.dataset.id = String(n); area.placeholder = 'Комментарий к этой задаче...';
@@ -136,97 +112,23 @@
     }
     el.board.appendChild(col);
   }
-  const checks = [...document.querySelectorAll('.task input[data-id]')];
-  const areas = [...document.querySelectorAll('textarea[data-id]')];
-  el.total.textContent = String(checks.length);
-  function stats() {
-    const n = checks.filter(x => x.checked).length;
-    const p = Math.round(n / checks.length * 100);
-    el.done.textContent = String(n); el.pct.textContent = p + '%'; el.fill.style.width = p + '%';
-  }
-  function vis(x) { x.closest('.task')?.classList.toggle('done', x.checked); }
-  function sync(text, cls = '') { el.sync.textContent = text; el.dot.className = 'dot ' + cls; }
-  async function save(n) {
-    if (!user) return;
-    const x = document.querySelector(`input[data-id="${n}"]`);
-    const a = document.querySelector(`textarea[data-id="${n}"]`);
-    if (!x || !a) return;
-    sync('Сохранение…','busy');
-    const { error } = await sb.from('task_progress').upsert({user_id:user.id,task_id:Number(n),completed:x.checked,comment:a.value,updated_at:new Date().toISOString()},{onConflict:'user_id,task_id'});
-    if (error) { console.error(error); notice('Не удалось сохранить изменение.','error'); sync('Ошибка','err'); }
-    else sync('Синхронизировано','ok');
-  }
-  async function load() {
-    if (!user) return;
-    sync('Загрузка…','busy');
-    const { data, error } = await sb.from('task_progress').select('task_id,completed,comment').eq('user_id',user.id);
-    if (error) { console.error(error); notice('Не удалось загрузить данные канбана.','error'); sync('Ошибка','err'); return; }
-    checks.forEach(x => { x.checked = false; vis(x); }); areas.forEach(a => a.value = '');
-    for (const r of data || []) {
-      const x = document.querySelector(`input[data-id="${r.task_id}"]`);
-      const a = document.querySelector(`textarea[data-id="${r.task_id}"]`);
-      if (x) { x.checked = !!r.completed; vis(x); }
-      if (a) {
-        a.value = r.comment || '';
-        if (a.value) {
-          document.getElementById('cb' + r.task_id)?.classList.add('open');
-          const toggle = document.querySelector(`.toggle[data-id="${r.task_id}"]`); if (toggle) toggle.textContent = '💬 Скрыть комментарий';
-        }
-      }
-    }
-    stats(); sync('Синхронизировано','ok');
-  }
-  checks.forEach(x => x.addEventListener('change', () => { vis(x); stats(); void save(x.dataset.id); }));
-  document.querySelectorAll('.toggle').forEach(b => b.addEventListener('click', () => {
-    const c = document.getElementById('cb' + b.dataset.id); if (!c) return;
-    const opened = c.classList.toggle('open'); b.textContent = opened ? '💬 Скрыть комментарий' : '💬 Добавить комментарий';
-  }));
-  areas.forEach(a => a.addEventListener('input', () => {
-    const n = a.dataset.id, s = document.getElementById('sv' + n); if (s) s.classList.add('on');
-    clearTimeout(timers[n]); timers[n] = setTimeout(async () => { await save(n); if (s) s.classList.remove('on'); }, 600);
-  }));
-  async function authUI(session) {
-    user = session?.user || null;
-    el.authOut.classList.toggle('hidden', !!user); el.authIn.classList.toggle('hidden', !user); el.who.textContent = user?.email || '';
-    if (user) await load();
-  }
-  el.login.addEventListener('click', async () => {
-    const email = el.email.value.trim(), password = el.pass.value;
-    if (!email || !password) { notice('Введи email и пароль.','error'); return; }
-    setAuthBusy(true); notice('Проверяю данные…','info');
-    try {
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) { notice(loginErrorMessage(error),'error'); return; }
-      notice('Вход выполнен успешно.','success');
-    } catch (e) { console.error(e); notice('Не удалось войти из-за ошибки соединения.','error'); }
-    finally { setAuthBusy(false); }
-  });
-  el.signup.addEventListener('click', async () => {
-    const email = el.email.value.trim(), password = el.pass.value, accessKey = el.accessKey.value;
-    if (!email || !password || !accessKey.trim()) { notice('Заполни email, пароль и особый ключ.','error'); return; }
-    setAuthBusy(true); notice('Проверяю ключ и создаю аккаунт…','info');
-    try {
-      const r = await fetch(URL + '/functions/v1/register-with-key', { method:'POST', headers:{'Content-Type':'application/json','apikey':KEY}, body:JSON.stringify({email,password,accessKey}) });
-      let data = {}; try { data = await r.json(); } catch {}
-      if (!r.ok) { notice(data.error || 'Аккаунт не создан. Проверь введённые данные.','error'); return; }
-      el.accessKey.value = '';
-      notice('Аккаунт успешно создан. Выполняю вход…','success');
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) { notice('Аккаунт создан, но автоматически войти не удалось. Попробуй войти вручную.','error'); return; }
-      notice('Аккаунт успешно создан. Вход выполнен.','success');
-    } catch (e) { console.error(e); notice('Ошибка соединения. Аккаунт не удалось создать.','error'); }
-    finally { setAuthBusy(false); }
-  });
-  el.logout.addEventListener('click', async () => { await sb.auth.signOut(); notice('Ты вышел из аккаунта.','info'); });
-  el.reset.addEventListener('click', async () => {
-    if (!user || !confirm('Удалить весь прогресс и комментарии?')) return;
-    const { error } = await sb.from('task_progress').delete().eq('user_id',user.id);
-    if (error) { notice('Не удалось сбросить прогресс.','error'); return; }
-    checks.forEach(x => { x.checked = false; vis(x); }); areas.forEach(a => a.value = ''); stats(); sync('Синхронизировано','ok'); notice('Прогресс и комментарии удалены.','success');
-  });
+  const checks = [...document.querySelectorAll('.task input[data-id]')], areas = [...document.querySelectorAll('textarea[data-id]')]; el.total.textContent = String(checks.length);
+  function stats(){const n=checks.filter(x=>x.checked).length,p=Math.round(n/checks.length*100);el.done.textContent=String(n);el.pct.textContent=p+'%';el.fill.style.width=p+'%'}
+  function vis(x){x.closest('.task')?.classList.toggle('done',x.checked)}
+  function sync(text,cls=''){el.sync.textContent=text;el.dot.className='dot '+cls}
+  async function save(n){if(!user)return;const x=document.querySelector(`input[data-id="${n}"]`),a=document.querySelector(`textarea[data-id="${n}"]`);if(!x||!a)return;sync('Сохранение…','busy');const{error}=await sb.from('task_progress').upsert({user_id:user.id,task_id:Number(n),completed:x.checked,comment:a.value,updated_at:new Date().toISOString()},{onConflict:'user_id,task_id'});if(error){console.error(error);notice('Не удалось сохранить изменение.','error');sync('Ошибка','err')}else sync('Синхронизировано','ok')}
+  async function load(){if(!user)return;sync('Загрузка…','busy');const{data,error}=await sb.from('task_progress').select('task_id,completed,comment').eq('user_id',user.id);if(error){console.error(error);notice('Не удалось загрузить данные канбана.','error');sync('Ошибка','err');return}checks.forEach(x=>{x.checked=false;vis(x)});areas.forEach(a=>a.value='');for(const r of data||[]){const x=document.querySelector(`input[data-id="${r.task_id}"]`),a=document.querySelector(`textarea[data-id="${r.task_id}"]`);if(x){x.checked=!!r.completed;vis(x)}if(a){a.value=r.comment||'';if(a.value){document.getElementById('cb'+r.task_id)?.classList.add('open');const t=document.querySelector(`.toggle[data-id="${r.task_id}"]`);if(t)t.textContent='💬 Скрыть комментарий'}}}stats();sync('Синхронизировано','ok')}
+  checks.forEach(x=>x.addEventListener('change',()=>{vis(x);stats();void save(x.dataset.id)}));
+  document.querySelectorAll('.toggle').forEach(b=>b.addEventListener('click',()=>{const c=document.getElementById('cb'+b.dataset.id);if(!c)return;const opened=c.classList.toggle('open');b.textContent=opened?'💬 Скрыть комментарий':'💬 Добавить комментарий'}));
+  areas.forEach(a=>a.addEventListener('input',()=>{const n=a.dataset.id,s=document.getElementById('sv'+n);if(s)s.classList.add('on');clearTimeout(timers[n]);timers[n]=setTimeout(async()=>{await save(n);if(s)s.classList.remove('on')},600)}));
+  async function authUI(session){user=session?.user||null;const loggedIn=!!user;el.authOut.classList.toggle('hidden',loggedIn);el.authIn.classList.toggle('hidden',!loggedIn);el.privateHeader.classList.toggle('hidden',!loggedIn);el.privateMain.classList.toggle('hidden',!loggedIn);el.who.textContent=user?.email||'';if(user)await load()}
+  el.login.addEventListener('click',async()=>{const email=el.email.value.trim(),password=el.pass.value;if(!email||!password){notice('Введи email и пароль.','error');return}setAuthBusy(true);notice('Проверяю данные…','info');try{const{error}=await sb.auth.signInWithPassword({email,password});if(error){notice(loginErrorMessage(error),'error');return}notice('Вход выполнен успешно.','success')}catch(e){console.error(e);notice('Не удалось войти из-за ошибки соединения.','error')}finally{setAuthBusy(false)}});
+  el.signup.addEventListener('click',async()=>{const email=el.email.value.trim(),password=el.pass.value,accessKey=el.accessKey.value;if(!email||!password||!accessKey.trim()){notice('Заполни email, пароль и особый ключ.','error');return}setAuthBusy(true);notice('Проверяю ключ и создаю аккаунт…','info');try{const r=await fetch(URL+'/functions/v1/register-with-key',{method:'POST',headers:{'Content-Type':'application/json','apikey':KEY},body:JSON.stringify({email,password,accessKey})});let data={};try{data=await r.json()}catch{}if(!r.ok){notice(data.error||'Аккаунт не создан. Проверь введённые данные.','error');return}el.accessKey.value='';notice('Аккаунт успешно создан. Выполняю вход…','success');const{error}=await sb.auth.signInWithPassword({email,password});if(error){notice('Аккаунт создан, но автоматически войти не удалось. Попробуй войти вручную.','error');return}notice('Аккаунт успешно создан. Вход выполнен.','success')}catch(e){console.error(e);notice('Ошибка соединения. Аккаунт не удалось создать.','error')}finally{setAuthBusy(false)}});
+  el.logout.addEventListener('click',async()=>{await sb.auth.signOut();notice('Ты вышел из аккаунта.','info')});
+  el.reset.addEventListener('click',async()=>{if(!user||!confirm('Удалить весь прогресс и комментарии?'))return;const{error}=await sb.from('task_progress').delete().eq('user_id',user.id);if(error){notice('Не удалось сбросить прогресс.','error');return}checks.forEach(x=>{x.checked=false;vis(x)});areas.forEach(a=>a.value='');stats();sync('Синхронизировано','ok');notice('Прогресс и комментарии удалены.','success')});
   stats();
-  sb.auth.getSession().then(({data:{session}}) => authUI(session)).catch(err => { console.error(err); notice('Не удалось проверить текущую сессию.','error'); });
-  sb.auth.onAuthStateChange((_event, session) => { setTimeout(() => { void authUI(session); }, 0); });
+  sb.auth.getSession().then(({data:{session}})=>authUI(session)).catch(err=>{console.error(err);notice('Не удалось проверить текущую сессию.','error')});
+  sb.auth.onAuthStateChange((_event,session)=>{setTimeout(()=>{void authUI(session)},0)});
 })();
 </script>
 </body>
