@@ -1,1 +1,233 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Канбаныч</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>:root{--bg:#0f172a;--p:#111827;--c:#1f2937;--t:#f8fafc;--m:#94a3b8;--a:#38bdf8;--g:#22c55e;--b:#334155;--r:#fb7185;--y:#f59e0b}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font-family:system-ui,sans-serif}header,main{max-width:1600px;margin:auto;padding:24px}.sub,.goal,.status{color:var(--m)}.auth,.column,.footer{background:var(--p);border:1px solid var(--b);border-radius:16px;padding:14px}.auth{max-width:760px;margin:14px 0}.row,.stats{display:flex;gap:8px;flex-wrap:wrap;align-items:center}input,textarea,button{font:inherit}input[type=email],input[type=password],input[type=text],textarea{background:#0b1220;color:var(--t);border:1px solid var(--b);border-radius:10px;padding:9px}input[type=email],input[type=password],input[type=text]{flex:1;min-width:180px}button{background:#172033;color:var(--t);border:1px solid var(--b);border-radius:10px;padding:8px 11px;cursor:pointer}button:hover{border-color:var(--a)}.stats{margin:12px 0}.stat{border:1px solid var(--b);border-radius:12px;padding:8px 12px}.bar{height:10px;background:#0b1220;border:1px solid var(--b);border-radius:99px;overflow:hidden}.fill{height:100%;width:0;background:linear-gradient(90deg,var(--a),var(--g))}.board{display:grid;grid-template-columns:repeat(8,minmax(280px,1fr));gap:14px;overflow-x:auto}.column{min-width:280px}.column h2{font-size:18px;margin:0 0 4px}.goal{font-size:13px;margin-bottom:10px}.wrap{margin:9px 0}.task{display:flex;gap:8px;background:var(--c);border:1px solid var(--b);border-radius:12px;padding:10px;cursor:pointer}.task.done{opacity:.55}.task.done span{text-decoration:line-through}.toggle{background:transparent;border:0;color:var(--m);padding:5px 2px;font-size:12px}.commentbox{display:none}.commentbox.open{display:block}.commentbox textarea{width:100%;min-height:68px;resize:vertical}.saved{color:var(--g);font-size:11px;opacity:0}.saved.on{opacity:1}.hidden{display:none!important}.footer{margin-top:20px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#64748b}.ok{background:var(--g)}.busy{background:var(--y)}.err{background:var(--r)}.keyrow{margin-top:8px}.keyrow input{width:100%}.notice{margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--b);font-size:14px;line-height:1.4}.notice.info{color:#bae6fd;background:rgba(14,165,233,.10);border-color:rgba(56,189,248,.35)}.notice.success{color:#bbf7d0;background:rgba(34,197,94,.10);border-color:rgba(34,197,94,.35)}.notice.error{color:#fecdd3;background:rgba(244,63,94,.10);border-color:rgba(251,113,133,.4)}@media(max-width:700px){header,main{padding:14px}}</style></head><body><header><h1>🎮 Канбаныч</h1><div class="sub">Канбан разработки игры с облачной синхронизацией между телефоном и компьютером.</div><section class="auth"><div id="out"><div class="row"><input id="email" type="email" placeholder="Email"><input id="pass" type="password" placeholder="Пароль (от 6 символов)"></div><div class="keyrow"><input id="accessKey" type="text" placeholder="Особый ключ — нужен только при создании аккаунта" autocomplete="off"></div><div class="row" style="margin-top:8px"><button id="login">Войти</button><button id="signup">Создать аккаунт по ключу</button></div></div><div id="in" class="hidden"><div class="row"><strong id="who"></strong><span class="status"><span id="dot" class="dot"></span> <span id="sync">Синхронизация…</span></span><button id="logout">Выйти</button></div></div><div id="msg" class="notice hidden"></div></section><div class="stats"><div class="stat">Выполнено: <b id="done">0</b></div><div class="stat">Всего: <b id="total">0</b></div><div class="stat">Прогресс: <b id="pct">0%</b></div></div><div class="bar"><div id="fill" class="fill"></div></div></header><main><div id="board" class="board"></div><section class="footer"><b>Облачная синхронизация</b><p class="sub">Войди под одним аккаунтом на обоих устройствах. Галочки и комментарии сохраняются в Supabase.</p><button id="reset">Сбросить весь мой прогресс</button></section></main><script>const URL='https://kczplxpvesfmualcjkuw.supabase.co',KEY='sb_publishable_JkEf05r9Sd9nPyO-m2WdEw_BEu7Ve-d',sb=supabase.createClient(URL,KEY);const stages=[['1. Идея','Понять, какую игру мы создаём.',["Сформулировать идею игры в 1–2 предложениях","Определить жанр: платформер, RPG, стратегия, idle и т.д.","Определить главную игровую механику","Определить платформу: браузер, ПК, мобильная","Выбрать 3–5 игр-референсов","Определить, чем игра будет интересна игроку"]],['2. Концепт и GDD','Разложить идею на конкретные правила.',["Описать основной игровой цикл: действие → награда → развитие","Описать управление","Определить условия победы и поражения","Продумать прогрессию игрока","Составить список персонажей, врагов и объектов","Определить визуальный стиль и атмосферу","Записать MVP — минимальную версию игры"]],['3. Прототип','Проверить главную механику.',["Создать базовую игровую сцену","Добавить управление игроком","Реализовать главную механику","Добавить простых противников или препятствия","Добавить условие победы/поражения","Проверить: играть уже интересно без красивой графики?"]],['4. Основная разработка','Собрать полноценную игровую систему.',["Разработать уровни или игровой мир","Добавить врагов и их поведение","Добавить предметы, способности или ресурсы","Реализовать прогрессию","Добавить систему здоровья, очков или экономики","Сделать меню, паузу и рестарт","Добавить сохранение прогресса"]],['5. Графика и звук','Сделать игру визуально цельной.',["Создать или подобрать графику","Добавить анимации","Оформить интерфейс","Добавить визуальные эффекты","Добавить звуки действий","Добавить музыку","Проверить читаемость и единый стиль"]],['6. Баланс','Сделать игру понятной и увлекательной.',["Настроить сложность","Настроить скорость прогрессии","Проверить награды и экономику","Убрать скучные или слишком сложные места","Проверить обучение игрока","Сыграть самому от начала до конца"]],['7. Тестирование','Найти ошибки до игроков.',["Проверить игру в разных браузерах/устройствах","Найти критические баги","Проверить производительность","Дать игру нескольким тестировщикам","Записать обратную связь","Исправить повторяющиеся проблемы"]],['8. Релиз','Опубликовать и улучшать игру.',["Подготовить финальную сборку","Создать название, иконку и описание игры","Сделать скриншоты или трейлер","Опубликовать игру","Собрать отзывы игроков","Составить список обновлений","Выпустить первый патч"]]];let id=0,user=null,timers={};const board=document.getElementById('board'),msg=document.getElementById('msg');function notice(text,type='info'){msg.textContent=text;msg.className='notice '+type}function clearNotice(){msg.textContent='';msg.className='notice hidden'}function loginErrorMessage(error){const code=String(error?.code||''),raw=String(error?.message||'').toLowerCase();if(code==='invalid_credentials'||raw.includes('invalid login credentials'))return 'Неверный email или пароль.';if(code==='email_not_confirmed'||raw.includes('email not confirmed'))return 'Email ещё не подтверждён.';if(raw.includes('rate limit')||code.includes('rate_limit'))return 'Слишком много попыток входа. Попробуй немного позже.';return 'Не удалось войти. Проверь данные и подключение к интернету.'}stages.forEach(s=>{const col=document.createElement('section');col.className='column';col.innerHTML='<h2>'+s[0]+'</h2><div class="goal">'+s[1]+'</div>';s[2].forEach(text=>{id++;const n=id,d=document.createElement('div');d.className='wrap';d.innerHTML='<label class="task"><input type="checkbox" data-id="'+n+'"><span>'+text+'</span></label><button class="toggle" data-id="'+n+'">💬 Добавить комментарий</button><div class="commentbox" id="cb'+n+'"><textarea data-id="'+n+'" placeholder="Комментарий к этой задаче..."></textarea><div class="saved" id="sv'+n+'">Сохранено</div></div>';col.appendChild(d)});board.appendChild(col)});const checks=[...document.querySelectorAll('.task input')],areas=[...document.querySelectorAll('textarea[data-id]')];total.textContent=checks.length;function stats(){const n=checks.filter(x=>x.checked).length,p=Math.round(n/checks.length*100);done.textContent=n;pct.textContent=p+'%';fill.style.width=p+'%'}function vis(x){x.closest('.task').classList.toggle('done',x.checked)}function sync(t,c=''){document.getElementById('sync').textContent=t;dot.className='dot '+c}async function save(n){if(!user)return;const x=document.querySelector('input[data-id="'+n+'"]'),a=document.querySelector('textarea[data-id="'+n+'"]');sync('Сохранение…','busy');const{error}=await sb.from('task_progress').upsert({user_id:user.id,task_id:+n,completed:x.checked,comment:a.value,updated_at:new Date().toISOString()},{onConflict:'user_id,task_id'});if(error){notice('Не удалось сохранить изменение.','error');sync('Ошибка','err')}else sync('Синхронизировано','ok')}async function load(){if(!user)return;sync('Загрузка…','busy');const{data,error}=await sb.from('task_progress').select('task_id,completed,comment').eq('user_id',user.id);if(error){notice('Не удалось загрузить данные канбана.','error');return sync('Ошибка','err')}checks.forEach(x=>{x.checked=false;vis(x)});areas.forEach(a=>a.value='');(data||[]).forEach(r=>{const x=document.querySelector('input[data-id="'+r.task_id+'"]'),a=document.querySelector('textarea[data-id="'+r.task_id+'"]');if(x){x.checked=!!r.completed;vis(x)}if(a){a.value=r.comment||'';if(a.value){document.getElementById('cb'+r.task_id).classList.add('open');document.querySelector('.toggle[data-id="'+r.task_id+'"]').textContent='💬 Скрыть комментарий'}}});stats();sync('Синхронизировано','ok')}checks.forEach(x=>x.onchange=()=>{vis(x);stats();save(x.dataset.id)});document.querySelectorAll('.toggle').forEach(b=>b.onclick=()=>{const c=document.getElementById('cb'+b.dataset.id),o=c.classList.toggle('open');b.textContent=o?'💬 Скрыть комментарий':'💬 Добавить комментарий'});areas.forEach(a=>a.oninput=()=>{const n=a.dataset.id,s=document.getElementById('sv'+n);s.classList.add('on');clearTimeout(timers[n]);timers[n]=setTimeout(async()=>{await save(n);s.classList.remove('on')},600)});async function authui(session){user=session?.user||null;out.classList.toggle('hidden',!!user);document.getElementById('in').classList.toggle('hidden',!user);who.textContent=user?.email||'';if(user)await load()}signup.onclick=async()=>{const emailValue=email.value.trim(),passwordValue=pass.value,keyValue=accessKey.value;if(!emailValue||!passwordValue||!keyValue.trim())return notice('Заполни email, пароль и особый ключ.','error');notice('Проверяю ключ и создаю аккаунт…','info');try{const r=await fetch(URL+'/functions/v1/register-with-key',{method:'POST',headers:{'Content-Type':'application/json','apikey':KEY},body:JSON.stringify({email:emailValue,password:passwordValue,accessKey:keyValue})});let data={};try{data=await r.json()}catch{}if(!r.ok){notice(data.error||'Аккаунт не создан. Проверь введённые данные.','error');return}accessKey.value='';notice('Аккаунт успешно создан. Выполняю вход…','success');const{error}=await sb.auth.signInWithPassword({email:emailValue,password:passwordValue});if(error){notice('Аккаунт создан, но автоматически войти не удалось. Попробуй войти вручную.','error');return}notice('Аккаунт успешно создан. Вход выполнен.','success')}catch(e){notice('Ошибка соединения. Аккаунт не удалось создать.','error')}};login.onclick=async()=>{const emailValue=email.value.trim(),passwordValue=pass.value;if(!emailValue||!passwordValue)return notice('Введи email и пароль.','error');notice('Проверяю данные…','info');const{error}=await sb.auth.signInWithPassword({email:emailValue,password:passwordValue});if(error){notice(loginErrorMessage(error),'error');return}notice('Вход выполнен успешно.','success')};logout.onclick=async()=>{await sb.auth.signOut();notice('Ты вышел из аккаунта.','info')};reset.onclick=async()=>{if(!user||!confirm('Удалить весь прогресс и комментарии?'))return;const{error}=await sb.from('task_progress').delete().eq('user_id',user.id);if(error)return notice('Не удалось сбросить прогресс.','error');checks.forEach(x=>{x.checked=false;vis(x)});areas.forEach(a=>a.value='');stats();sync('Синхронизировано','ok');notice('Прогресс и комментарии удалены.','success')};(async()=>{stats();const{data:{session}}=await sb.auth.getSession();await authui(session);sb.auth.onAuthStateChange((_e,s)=>authui(s))})();</script></body></html>
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Канбаныч</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{--bg:#0f172a;--p:#111827;--c:#1f2937;--t:#f8fafc;--m:#94a3b8;--a:#38bdf8;--g:#22c55e;--b:#334155;--r:#fb7185;--y:#f59e0b}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font-family:system-ui,sans-serif}header,main{max-width:1600px;margin:auto;padding:24px}.sub,.goal,.status{color:var(--m)}
+    .auth,.column,.footer{background:var(--p);border:1px solid var(--b);border-radius:16px;padding:14px}.auth{max-width:760px;margin:14px 0}.row,.stats{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    input,textarea,button{font:inherit}input[type=email],input[type=password],input[type=text],textarea{background:#0b1220;color:var(--t);border:1px solid var(--b);border-radius:10px;padding:9px}input[type=email],input[type=password],input[type=text]{flex:1;min-width:180px}
+    button{background:#172033;color:var(--t);border:1px solid var(--b);border-radius:10px;padding:8px 11px;cursor:pointer}button:hover{border-color:var(--a)}button:disabled{opacity:.55;cursor:not-allowed}
+    .stats{margin:12px 0}.stat{border:1px solid var(--b);border-radius:12px;padding:8px 12px}.bar{height:10px;background:#0b1220;border:1px solid var(--b);border-radius:99px;overflow:hidden}.fill{height:100%;width:0;background:linear-gradient(90deg,var(--a),var(--g))}
+    .board{display:grid;grid-template-columns:repeat(8,minmax(280px,1fr));gap:14px;overflow-x:auto}.column{min-width:280px}.column h2{font-size:18px;margin:0 0 4px}.goal{font-size:13px;margin-bottom:10px}.wrap{margin:9px 0}.task{display:flex;gap:8px;background:var(--c);border:1px solid var(--b);border-radius:12px;padding:10px;cursor:pointer}.task.done{opacity:.55}.task.done span{text-decoration:line-through}
+    .toggle{background:transparent;border:0;color:var(--m);padding:5px 2px;font-size:12px}.commentbox{display:none}.commentbox.open{display:block}.commentbox textarea{width:100%;min-height:68px;resize:vertical}.saved{color:var(--g);font-size:11px;opacity:0}.saved.on{opacity:1}
+    .hidden{display:none!important}.footer{margin-top:20px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#64748b}.ok{background:var(--g)}.busy{background:var(--y)}.err{background:var(--r)}.keyrow{margin-top:8px}.keyrow input{width:100%}
+    .notice{margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--b);font-size:14px;line-height:1.4}.notice.info{color:#bae6fd;background:rgba(14,165,233,.10);border-color:rgba(56,189,248,.35)}.notice.success{color:#bbf7d0;background:rgba(34,197,94,.10);border-color:rgba(34,197,94,.35)}.notice.error{color:#fecdd3;background:rgba(244,63,94,.10);border-color:rgba(251,113,133,.4)}
+    .toast{position:fixed;top:16px;right:16px;z-index:9999;max-width:min(420px,calc(100vw - 32px));padding:14px 16px;border-radius:14px;border:1px solid var(--b);box-shadow:0 18px 50px rgba(0,0,0,.35);font-weight:650;line-height:1.35}.toast.info{color:#e0f2fe;background:#0c4a6e;border-color:#38bdf8}.toast.success{color:#dcfce7;background:#14532d;border-color:#22c55e}.toast.error{color:#ffe4e6;background:#881337;border-color:#fb7185}
+    .version{margin-top:9px;font-size:11px}
+    @media(max-width:700px){header,main{padding:14px}.toast{left:12px;right:12px;top:12px;max-width:none}}
+  </style>
+</head>
+<body>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+  <header>
+    <h1>🎮 Канбаныч</h1>
+    <div class="sub">Канбан разработки игры с облачной синхронизацией между телефоном и компьютером.</div>
+    <section class="auth">
+      <div id="out">
+        <div class="row">
+          <input id="email" type="email" placeholder="Email" autocomplete="email">
+          <input id="pass" type="password" placeholder="Пароль (от 6 символов)" autocomplete="current-password">
+        </div>
+        <div class="keyrow"><input id="accessKey" type="text" placeholder="Особый ключ — нужен только при создании аккаунта" autocomplete="off"></div>
+        <div class="row" style="margin-top:8px">
+          <button id="login" type="button">Войти</button>
+          <button id="signup" type="button">Создать аккаунт по ключу</button>
+        </div>
+      </div>
+      <div id="in" class="hidden">
+        <div class="row"><strong id="who"></strong><span class="status"><span id="dot" class="dot"></span> <span id="sync">Синхронизация…</span></span><button id="logout" type="button">Выйти</button></div>
+      </div>
+      <div id="msg" class="notice hidden" role="status" aria-live="polite"></div>
+      <div class="sub version">Интерфейс v4</div>
+    </section>
+    <div class="stats"><div class="stat">Выполнено: <b id="done">0</b></div><div class="stat">Всего: <b id="total">0</b></div><div class="stat">Прогресс: <b id="pct">0%</b></div></div>
+    <div class="bar"><div id="fill" class="fill"></div></div>
+  </header>
+  <main>
+    <div id="board" class="board"></div>
+    <section class="footer"><b>Облачная синхронизация</b><p class="sub">Войди под одним аккаунтом на обоих устройствах. Галочки и комментарии сохраняются в Supabase.</p><button id="reset" type="button">Сбросить весь мой прогресс</button></section>
+  </main>
+<script>
+(() => {
+  const URL = 'https://kczplxpvesfmualcjkuw.supabase.co';
+  const KEY = 'sb_publishable_JkEf05r9Sd9nPyO-m2WdEw_BEu7Ve-d';
+  const el = {
+    board: document.getElementById('board'), msg: document.getElementById('msg'), toast: document.getElementById('toast'),
+    authOut: document.getElementById('out'), authIn: document.getElementById('in'), email: document.getElementById('email'),
+    pass: document.getElementById('pass'), accessKey: document.getElementById('accessKey'), login: document.getElementById('login'),
+    signup: document.getElementById('signup'), who: document.getElementById('who'), dot: document.getElementById('dot'),
+    sync: document.getElementById('sync'), logout: document.getElementById('logout'), done: document.getElementById('done'),
+    total: document.getElementById('total'), pct: document.getElementById('pct'), fill: document.getElementById('fill'),
+    reset: document.getElementById('reset')
+  };
+  let toastTimer = null;
+  function notice(text, type = 'info') {
+    el.msg.textContent = text;
+    el.msg.className = 'notice ' + type;
+    el.toast.textContent = text;
+    el.toast.className = 'toast ' + type;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.toast.className = 'toast hidden'; }, 5000);
+  }
+  function setAuthBusy(busy) { el.login.disabled = busy; el.signup.disabled = busy; }
+  function loginErrorMessage(error) {
+    const code = String(error?.code || '');
+    const raw = String(error?.message || '').toLowerCase();
+    if (code === 'invalid_credentials' || raw.includes('invalid login credentials')) return 'Неверный email или пароль.';
+    if (code === 'email_not_confirmed' || raw.includes('email not confirmed')) return 'Email ещё не подтверждён.';
+    if (raw.includes('rate limit') || code.includes('rate_limit')) return 'Слишком много попыток входа. Попробуй немного позже.';
+    return 'Не удалось войти. Проверь данные и подключение к интернету.';
+  }
+  window.addEventListener('error', (event) => {
+    console.error('UI error:', event.error || event.message);
+    if (el?.msg) notice('Произошла ошибка интерфейса. Обнови страницу и попробуй ещё раз.', 'error');
+  });
+  if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+    notice('Не удалось загрузить модуль Supabase. Обнови страницу или проверь блокировщики контента.', 'error');
+    setAuthBusy(true);
+    return;
+  }
+  const sb = window.supabase.createClient(URL, KEY);
+  const stages = [
+    ['1. Идея','Понять, какую игру мы создаём.',[
+      'Сформулировать идею игры в 1–2 предложениях','Определить жанр: платформер, RPG, стратегия, idle и т.д.','Определить главную игровую механику','Определить платформу: браузер, ПК, мобильная','Выбрать 3–5 игр-референсов','Определить, чем игра будет интересна игроку']],
+    ['2. Концепт и GDD','Разложить идею на конкретные правила.',[
+      'Описать основной игровой цикл: действие → награда → развитие','Описать управление','Определить условия победы и поражения','Продумать прогрессию игрока','Составить список персонажей, врагов и объектов','Определить визуальный стиль и атмосферу','Записать MVP — минимальную версию игры']],
+    ['3. Прототип','Проверить главную механику.',[
+      'Создать базовую игровую сцену','Добавить управление игроком','Реализовать главную механику','Добавить простых противников или препятствия','Добавить условие победы/поражения','Проверить: играть уже интересно без красивой графики?']],
+    ['4. Основная разработка','Собрать полноценную игровую систему.',[
+      'Разработать уровни или игровой мир','Добавить врагов и их поведение','Добавить предметы, способности или ресурсы','Реализовать прогрессию','Добавить систему здоровья, очков или экономики','Сделать меню, паузу и рестарт','Добавить сохранение прогресса']],
+    ['5. Графика и звук','Сделать игру визуально цельной.',[
+      'Создать или подобрать графику','Добавить анимации','Оформить интерфейс','Добавить визуальные эффекты','Добавить звуки действий','Добавить музыку','Проверить читаемость и единый стиль']],
+    ['6. Баланс','Сделать игру понятной и увлекательной.',[
+      'Настроить сложность','Настроить скорость прогрессии','Проверить награды и экономику','Убрать скучные или слишком сложные места','Проверить обучение игрока','Сыграть самому от начала до конца']],
+    ['7. Тестирование','Найти ошибки до игроков.',[
+      'Проверить игру в разных браузерах/устройствах','Найти критические баги','Проверить производительность','Дать игру нескольким тестировщикам','Записать обратную связь','Исправить повторяющиеся проблемы']],
+    ['8. Релиз','Опубликовать и улучшать игру.',[
+      'Подготовить финальную сборку','Создать название, иконку и описание игры','Сделать скриншоты или трейлер','Опубликовать игру','Собрать отзывы игроков','Составить список обновлений','Выпустить первый патч']]
+  ];
+  let id = 0, user = null;
+  const timers = {};
+  for (const stage of stages) {
+    const col = document.createElement('section');
+    col.className = 'column';
+    const title = document.createElement('h2'); title.textContent = stage[0]; col.appendChild(title);
+    const goal = document.createElement('div'); goal.className = 'goal'; goal.textContent = stage[1]; col.appendChild(goal);
+    for (const text of stage[2]) {
+      id++;
+      const n = id;
+      const wrap = document.createElement('div'); wrap.className = 'wrap';
+      const label = document.createElement('label'); label.className = 'task';
+      const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.dataset.id = String(n);
+      const span = document.createElement('span'); span.textContent = text;
+      label.append(checkbox, span);
+      const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'toggle'; toggle.dataset.id = String(n); toggle.textContent = '💬 Добавить комментарий';
+      const box = document.createElement('div'); box.className = 'commentbox'; box.id = 'cb' + n;
+      const area = document.createElement('textarea'); area.dataset.id = String(n); area.placeholder = 'Комментарий к этой задаче...';
+      const saved = document.createElement('div'); saved.className = 'saved'; saved.id = 'sv' + n; saved.textContent = 'Сохранено';
+      box.append(area, saved); wrap.append(label, toggle, box); col.appendChild(wrap);
+    }
+    el.board.appendChild(col);
+  }
+  const checks = [...document.querySelectorAll('.task input[data-id]')];
+  const areas = [...document.querySelectorAll('textarea[data-id]')];
+  el.total.textContent = String(checks.length);
+  function stats() {
+    const n = checks.filter(x => x.checked).length;
+    const p = Math.round(n / checks.length * 100);
+    el.done.textContent = String(n); el.pct.textContent = p + '%'; el.fill.style.width = p + '%';
+  }
+  function vis(x) { x.closest('.task')?.classList.toggle('done', x.checked); }
+  function sync(text, cls = '') { el.sync.textContent = text; el.dot.className = 'dot ' + cls; }
+  async function save(n) {
+    if (!user) return;
+    const x = document.querySelector(`input[data-id="${n}"]`);
+    const a = document.querySelector(`textarea[data-id="${n}"]`);
+    if (!x || !a) return;
+    sync('Сохранение…','busy');
+    const { error } = await sb.from('task_progress').upsert({user_id:user.id,task_id:Number(n),completed:x.checked,comment:a.value,updated_at:new Date().toISOString()},{onConflict:'user_id,task_id'});
+    if (error) { console.error(error); notice('Не удалось сохранить изменение.','error'); sync('Ошибка','err'); }
+    else sync('Синхронизировано','ok');
+  }
+  async function load() {
+    if (!user) return;
+    sync('Загрузка…','busy');
+    const { data, error } = await sb.from('task_progress').select('task_id,completed,comment').eq('user_id',user.id);
+    if (error) { console.error(error); notice('Не удалось загрузить данные канбана.','error'); sync('Ошибка','err'); return; }
+    checks.forEach(x => { x.checked = false; vis(x); }); areas.forEach(a => a.value = '');
+    for (const r of data || []) {
+      const x = document.querySelector(`input[data-id="${r.task_id}"]`);
+      const a = document.querySelector(`textarea[data-id="${r.task_id}"]`);
+      if (x) { x.checked = !!r.completed; vis(x); }
+      if (a) {
+        a.value = r.comment || '';
+        if (a.value) {
+          document.getElementById('cb' + r.task_id)?.classList.add('open');
+          const toggle = document.querySelector(`.toggle[data-id="${r.task_id}"]`); if (toggle) toggle.textContent = '💬 Скрыть комментарий';
+        }
+      }
+    }
+    stats(); sync('Синхронизировано','ok');
+  }
+  checks.forEach(x => x.addEventListener('change', () => { vis(x); stats(); void save(x.dataset.id); }));
+  document.querySelectorAll('.toggle').forEach(b => b.addEventListener('click', () => {
+    const c = document.getElementById('cb' + b.dataset.id); if (!c) return;
+    const opened = c.classList.toggle('open'); b.textContent = opened ? '💬 Скрыть комментарий' : '💬 Добавить комментарий';
+  }));
+  areas.forEach(a => a.addEventListener('input', () => {
+    const n = a.dataset.id, s = document.getElementById('sv' + n); if (s) s.classList.add('on');
+    clearTimeout(timers[n]); timers[n] = setTimeout(async () => { await save(n); if (s) s.classList.remove('on'); }, 600);
+  }));
+  async function authUI(session) {
+    user = session?.user || null;
+    el.authOut.classList.toggle('hidden', !!user); el.authIn.classList.toggle('hidden', !user); el.who.textContent = user?.email || '';
+    if (user) await load();
+  }
+  el.login.addEventListener('click', async () => {
+    const email = el.email.value.trim(), password = el.pass.value;
+    if (!email || !password) { notice('Введи email и пароль.','error'); return; }
+    setAuthBusy(true); notice('Проверяю данные…','info');
+    try {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) { notice(loginErrorMessage(error),'error'); return; }
+      notice('Вход выполнен успешно.','success');
+    } catch (e) { console.error(e); notice('Не удалось войти из-за ошибки соединения.','error'); }
+    finally { setAuthBusy(false); }
+  });
+  el.signup.addEventListener('click', async () => {
+    const email = el.email.value.trim(), password = el.pass.value, accessKey = el.accessKey.value;
+    if (!email || !password || !accessKey.trim()) { notice('Заполни email, пароль и особый ключ.','error'); return; }
+    setAuthBusy(true); notice('Проверяю ключ и создаю аккаунт…','info');
+    try {
+      const r = await fetch(URL + '/functions/v1/register-with-key', { method:'POST', headers:{'Content-Type':'application/json','apikey':KEY}, body:JSON.stringify({email,password,accessKey}) });
+      let data = {}; try { data = await r.json(); } catch {}
+      if (!r.ok) { notice(data.error || 'Аккаунт не создан. Проверь введённые данные.','error'); return; }
+      el.accessKey.value = '';
+      notice('Аккаунт успешно создан. Выполняю вход…','success');
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) { notice('Аккаунт создан, но автоматически войти не удалось. Попробуй войти вручную.','error'); return; }
+      notice('Аккаунт успешно создан. Вход выполнен.','success');
+    } catch (e) { console.error(e); notice('Ошибка соединения. Аккаунт не удалось создать.','error'); }
+    finally { setAuthBusy(false); }
+  });
+  el.logout.addEventListener('click', async () => { await sb.auth.signOut(); notice('Ты вышел из аккаунта.','info'); });
+  el.reset.addEventListener('click', async () => {
+    if (!user || !confirm('Удалить весь прогресс и комментарии?')) return;
+    const { error } = await sb.from('task_progress').delete().eq('user_id',user.id);
+    if (error) { notice('Не удалось сбросить прогресс.','error'); return; }
+    checks.forEach(x => { x.checked = false; vis(x); }); areas.forEach(a => a.value = ''); stats(); sync('Синхронизировано','ok'); notice('Прогресс и комментарии удалены.','success');
+  });
+  stats();
+  sb.auth.getSession().then(({data:{session}}) => authUI(session)).catch(err => { console.error(err); notice('Не удалось проверить текущую сессию.','error'); });
+  sb.auth.onAuthStateChange((_event, session) => { setTimeout(() => { void authUI(session); }, 0); });
+})();
+</script>
+</body>
+</html>
